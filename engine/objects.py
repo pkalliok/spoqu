@@ -52,10 +52,13 @@ def collision_time(go1, go2):
     # scale the distance with go1's movement into time
     return [nearest_time - sqrt(dist_sq_diff / dist2(ref_movement))]
 
-def collision_times(gobjs, maxtime):
-    return sorted((dtime, i1, i2)
+def next_collision(gobjs):
+    return min((dtime, i1, i2)
             for i1 in range(len(gobjs))
             for i2 in range(i1, len(gobjs))
-            for dtime in collision_time(gobjs[i1], gobjs[i2])
-            if dtime < maxtime)
+            for dtime in collision_time(gobjs[i1], gobjs[i2]))
+
+def update_until_collision(gobjs):
+    dtime, i1, i2 = next_collision(gobjs)
+    return [no_collision_update(o, dtime) for o in gobjs]
 
