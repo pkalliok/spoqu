@@ -1,7 +1,10 @@
 
 import numpy as np
 from numpy import array as ar
+from math import sqrt
 from copy import copy
+
+def dist2(vec): return vec.dot(vec)
 
 class GameObj(object):
     def __init__(s, **kwargs):
@@ -11,12 +14,6 @@ class GameObj(object):
         res = copy(s)
         res.__dict__.update(kwargs)
         return res
-
-    def speed(s):
-        try: return s._speed
-        except AttributeError:
-            s._speed = np.sqrt(s.d.dot(s.d))
-            return s._speed
 
     def __str__(s): return repr(s)
 
@@ -31,10 +28,34 @@ def new_object(pos=(0.,0.), d=(0.,0.), radius=1., time=0., weight=1.):
 def no_collision_update(gobj, dtime):
     return gobj.w(pos=(gobj.pos + gobj.d * dtime), time=(gobj.time + dtime))
 
-def may_collide(go1, go2, dtime):
-    dpos = go1.pos - go2.pos
-    reach = go1.radius + go2.radius + (go1.speed() + go2.speed()) * dtime
-    return dpos.dot(dpos) < reach*reach
+def projection_factor(onto_vec, from_vec):
+    return onto_vec.dot(from_vec) / dist2(onto_vec)
 
-def will_collide(go1, go2, dtime): return "STUB"
+def collision_time(go1, go2):
+    # use reference coordinates where go2 does not move
+    ref_movement = go1.d - go2.d
+    # is their movement exactly the same?
+    if dist2(ref_movement) <= 0.: return []
+    # find how long it takes in ref_movement for go1 to be closest to go2
+    nearest_time = projection_factor(ref_movement, go2.pos - go1.pos)
+    # are they actually getting further from each other?
+    if nearest_time < 0.: return []
+    # the distance vector from go2 to the closest passing point
+    nearest_dist = go1.pos + nearest_time * ref_movement - go2.pos
+    # the distance in which go1 and go2 will collide
+    collide_dist = go1.radius + go2.radius
+    # square of the distance, from nearest point, along go1's movement,
+    # where the collision will happen
+    dist_sq_diff = collide_dist*collide_dist - dist2(nearest_dist)
+    # will collision happen?
+    if dist_sq_diff < 0.: return []
+    # scale the distance with go1's movement into time
+    return [nearest_time - sqrt(dist_sq_diff / dist2(ref_movement))]
+
+def collision_times(gobjs, maxtime):
+    return sorted((dtime, i1, i2)
+            for i1 in range(len(gobjs))
+            for i2 in range(i1, len(gobjs))
+            for dtime in collision_time(gobjs[i1], gobjs[i2])
+            if dtime < maxtime)
 
