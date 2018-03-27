@@ -3,6 +3,7 @@ import numpy as np
 from numpy import array as ar
 from math import sqrt
 from copy import copy
+from itertools import chain
 
 def dist2(vec): return vec.dot(vec)
 
@@ -52,13 +53,13 @@ def collision_time(go1, go2):
     # scale the distance with go1's movement into time
     return [nearest_time - sqrt(dist_sq_diff / dist2(ref_movement))]
 
-def next_collision(gobjs):
-    return min((dtime, i1, i2)
-            for i1 in range(len(gobjs))
-            for i2 in range(i1, len(gobjs))
-            for dtime in collision_time(gobjs[i1], gobjs[i2]))
+def next_collision(gobjs, maxtime):
+    return min(chain([(maxtime, None, None)],((dtime, i1, i2)
+        for i1 in range(len(gobjs))
+        for i2 in range(i1 + 1, len(gobjs))
+        for dtime in collision_time(gobjs[i1], gobjs[i2]))))
 
-def update_until_collision(gobjs):
-    dtime, i1, i2 = next_collision(gobjs)
+def update_until_collision(gobjs, maxtime):
+    dtime, i1, i2 = next_collision(gobjs, maxtime)
     return [no_collision_update(o, dtime) for o in gobjs]
 
